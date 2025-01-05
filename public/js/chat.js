@@ -58,10 +58,6 @@ async function joinRoom(roomId) {
     console.log(`Joined room ${roomId}`);
 }
 
-
-
-
-
 // Funkce pro odesílání zpráv
 function sendMessage() {
     const input = document.getElementById('chat-input');

@@ -15,19 +15,30 @@ module.exports = (io) => {
                     socket.emit('error', { message: 'Room does not exist.' });
                     return;
                 }
-
+        
                 const [banned] = await db.execute('SELECT * FROM banned_users WHERE room_id = ? AND user_id = ?', [roomId, username]);
                 if (banned.length > 0) {
                     socket.emit('error', { message: 'You are banned from this room.' });
                     return;
                 }
-
+        
                 socket.join(roomId);
+                console.log(`${username} joined room ${roomId}`);
+        
+                // Poslat systémovou zprávu o připojení uživatele do místnosti
+                io.to(roomId).emit('message', {
+                    username: 'System',
+                    content: `${username} has joined the room.`,
+                });
+        
                 socket.emit('success', { message: 'Joined room successfully.' });
             } catch (error) {
                 socket.emit('error', { message: 'An error occurred.' });
+                console.error('Error joining room:', error);
             }
         });
+        
+        
         // Opustit místnost
         socket.on('leaveRoom', ({ roomId, username }) => {
             try {
@@ -44,35 +55,18 @@ module.exports = (io) => {
             const { roomId, username, content } = data;
         
             try {
+                // Ověření existence místnosti
                 const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ?', [roomId]);
                 if (room.length === 0) {
                     socket.emit('error', { message: 'Room does not exist' });
                     return;
                 }
         
+                // Filtr na vulgarity
                 if (room[0].enable_filter) {
                     const containsProfanity = await profanityFilter.checkProfanity(content);
                     if (containsProfanity) {
                         socket.emit('profanityWarning', { message: 'Your message contains inappropriate language.' });
-        
-                        // Odeslání notifikace vlastníkovi místnosti
-                        const [owner] = await db.execute('SELECT username FROM users WHERE id = ?', [room[0].owner_id]);
-                        if (owner.length > 0) {
-                            const ownerSocket = Array.from(io.sockets.sockets.values()).find(
-                                (s) => s.username === owner[0].username
-                            );
-        
-                            if (ownerSocket) {
-                                ownerSocket.emit('profanityNotification', {
-                                    username,
-                                    content,
-                                    message: `Blocked message from user ${username}: "${content}"`,
-                                });
-                            } else {
-                                console.log(`Owner socket for ${owner[0].username} not found.`);
-                            }
-                        }
-        
                         return;
                     }
                 }
@@ -83,6 +77,7 @@ module.exports = (io) => {
                 console.error('Error sending message:', error);
             }
         });
+        
         
         // Odpojení klienta
         socket.on('disconnect', () => {
