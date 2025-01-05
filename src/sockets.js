@@ -2,7 +2,7 @@ const profanityFilter = require('./utils/profanity');
 const db = require('./db');
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('./middleware/authenticateToken'); // Adjust the path as needed
+const authenticateToken = require('./middleware/auth'); // Adjust the path as needed
 
 module.exports = (io) => {
     io.on('connection', (socket) => {
