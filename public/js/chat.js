@@ -19,21 +19,29 @@ window.onload = () => {
 
 // Funkce pro připojení do místnosti
 async function joinRoom(roomId) {
-    currentRoomId = roomId; // Uložíme aktuální místnost
+    currentRoomId = roomId; // Nastavíme aktuální místnost
     socket.emit('joinRoom', { roomId, username });
 
-    socket.on('error', (data) => {
-        alert(data.message); // Zobrazí chybu při připojení
-    });
+    // Odebrání starých listenerů pro zprávy
+    socket.off('message');
+    socket.off('error');
 
-    // Přijímání zpráv
+    // Přidání nového listeneru pro zprávy
     socket.on('message', (data) => {
         const chatBox = document.getElementById('chat-box');
         const newMessage = document.createElement('div');
         newMessage.textContent = `${data.username}: ${data.content}`;
         chatBox.appendChild(newMessage);
     });
+
+    // Přidání listeneru pro chyby
+    socket.on('error', (data) => {
+        alert(data.message);
+    });
+
+    console.log(`Joined room ${roomId}`);
 }
+
 
 // Funkce pro odesílání zpráv
 function sendMessage() {

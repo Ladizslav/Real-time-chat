@@ -15,6 +15,13 @@ module.exports = (io) => {
                     return;
                 }
 
+                // Zamezíme opakovanému připojení do stejné místnosti
+                const rooms = Array.from(socket.rooms);
+                if (rooms.includes(roomId)) {
+                    console.log(`${username} is already in room ${roomId}`);
+                    return;
+                }
+
                 // Pokud je místnost soukromá, zkontroluj přístup uživatele
                 if (room[0].is_private) {
                     const [allowedUsers] = await db.execute(
@@ -55,6 +62,18 @@ module.exports = (io) => {
                     const containsProfanity = await profanityFilter.checkProfanity(content);
                     if (containsProfanity) {
                         socket.emit('profanityWarning', { message: 'Your message contains inappropriate language.' });
+
+                        // Informujeme vlastníka místnosti o nevhodné zprávě
+                        const ownerSocket = Array.from(io.sockets.sockets.values()).find(
+                            (s) => s.username === room[0].owner_id
+                        );
+                        if (ownerSocket) {
+                            ownerSocket.emit('profanityNotification', {
+                                username,
+                                message: `User ${username} tried to send a blocked message: "${content}"`,
+                            });
+                        }
+
                         return;
                     }
                 }
