@@ -6,33 +6,69 @@ module.exports = (io) => {
         console.log('New client connected');
 
         // Připojení k místnosti
-        socket.on('joinRoom', async ({ roomId, username }) => {
+        router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
+            const { roomId } = req.params;
+            const { userId } = req.body;
+            const ownerId = req.user.id;
+        
             try {
-                // Zkontrolujeme, zda místnost existuje
-                const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ?', [roomId]);
+                // Zkontrolujeme, zda aktuální uživatel je vlastníkem místnosti
+                const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ? AND owner_id = ?', [roomId, ownerId]);
                 if (room.length === 0) {
-                    socket.emit('error', { message: 'Room does not exist.' });
-                    return;
+                    return res.status(403).json({ error: 'You are not the owner of this room.' });
                 }
         
-                // Kontrola, zda je uživatel zabanovaný
-                const [banned] = await db.execute('SELECT * FROM banned_users WHERE room_id = ? AND user_id = ?', [roomId, username]);
-                if (banned.length > 0) {
-                    socket.emit('error', { message: 'You are banned from this room.' });
-                    return;
-                }
+                // Přidání uživatele do seznamu zabanovaných
+                await db.execute('INSERT INTO banned_users (room_id, user_id) VALUES (?, ?)', [roomId, userId]);
         
-                // Připojení k místnosti
-                socket.join(roomId);
-                console.log(`${username} joined room ${roomId}`);
-                io.to(roomId).emit('message', { username, content: `${username} has joined the room.` });
+                // Odpojení uživatele, pokud je aktuálně v místnosti
+                const socketsToKick = Array.from(io.sockets.sockets.values()).filter(
+                    (socket) => socket.rooms.has(roomId) && socket.username === userId
+                );
+        
+                socketsToKick.forEach((socket) => {
+                    socket.leave(roomId);
+                    socket.emit('error', { message: 'You have been banned from this room.' });
+                });
+        
+                res.status(200).json({ message: 'User banned successfully and kicked from the room.' });
             } catch (error) {
-                console.error('Error joining room:', error);
-                socket.emit('error', { message: 'An error occurred while joining the room.' });
+                console.error('Error banning user:', error);
+                res.status(500).json({ error: 'Internal server error' });
             }
         });
         
-
+        router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
+            const { roomId } = req.params;
+            const { userId } = req.body;
+            const ownerId = req.user.id;
+        
+            try {
+                // Zkontrolujeme, zda aktuální uživatel je vlastníkem místnosti
+                const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ? AND owner_id = ?', [roomId, ownerId]);
+                if (room.length === 0) {
+                    return res.status(403).json({ error: 'You are not the owner of this room.' });
+                }
+        
+                // Přidání uživatele do seznamu zabanovaných
+                await db.execute('INSERT INTO banned_users (room_id, user_id) VALUES (?, ?)', [roomId, userId]);
+        
+                // Odpojení uživatele, pokud je aktuálně v místnosti
+                const socketsToKick = Array.from(io.sockets.sockets.values()).filter(
+                    (socket) => socket.rooms.has(roomId) && socket.username === userId
+                );
+        
+                socketsToKick.forEach((socket) => {
+                    socket.leave(roomId);
+                    socket.emit('error', { message: 'You have been banned from this room.' });
+                });
+        
+                res.status(200).json({ message: 'User banned successfully and kicked from the room.' });
+            } catch (error) {
+                console.error('Error banning user:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        });
         // Opustit místnost
         socket.on('leaveRoom', ({ roomId, username }) => {
             try {

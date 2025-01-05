@@ -82,7 +82,6 @@ async function createRoom() {
     const isPrivate = document.getElementById('is-private').checked;
     const enableFilter = document.getElementById('enable-filter').checked;
 
-    // Pokud je místnost soukromá, požádáme o seznam uživatelů
     const allowedUsers = isPrivate
         ? prompt('Enter usernames of allowed users (comma-separated):').split(',').map((u) => u.trim())
         : [];
@@ -112,6 +111,7 @@ async function createRoom() {
         console.error('Error creating room:', error);
     }
 }
+
 
 
 // Funkce pro odhlášení uživatele
