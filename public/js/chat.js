@@ -101,7 +101,10 @@ async function createRoom() {
             body: JSON.stringify({ name: roomName, isPrivate, enableFilter, allowedUsers }),
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
+
         if (response.ok) {
             alert('Room created successfully!');
         } else {
@@ -111,6 +114,7 @@ async function createRoom() {
         console.error('Error creating room:', error);
     }
 }
+
 
 
 

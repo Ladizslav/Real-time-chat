@@ -6,7 +6,8 @@ const db = require('../db');
 // Vytvoření nové místnosti
 router.post('/rooms', authenticateToken, async (req, res) => {
     const { name, isPrivate, enableFilter, allowedUsers } = req.body;
-    const ownerId = req.user.id;
+    console.log('Request body:', req.body);
+    console.log('User ID:', req.user);
 
     if (!name) {
         return res.status(400).json({ error: 'Room name is required' });
@@ -15,12 +16,11 @@ router.post('/rooms', authenticateToken, async (req, res) => {
     try {
         const [result] = await db.execute(
             'INSERT INTO chat_rooms (name, is_private, owner_id, enable_filter) VALUES (?, ?, ?, ?)',
-            [name, isPrivate || false, ownerId, enableFilter || false]
+            [name, isPrivate || false, req.user.id, enableFilter || false]
         );
 
         const roomId = result.insertId;
 
-        // Pokud je místnost soukromá, přidej povolené uživatele
         if (isPrivate && allowedUsers) {
             for (const userId of allowedUsers) {
                 await db.execute('INSERT INTO allowed_users (room_id, user_id) VALUES (?, ?)', [roomId, userId.trim()]);
@@ -33,6 +33,7 @@ router.post('/rooms', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 router.get('/rooms', authenticateToken, async (req, res) => {
     try {
