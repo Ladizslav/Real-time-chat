@@ -1,36 +1,25 @@
-const db = require('./db');
 const profanityFilter = require('./utils/profanity');
+const db = require('./db');
 
 module.exports = (io) => {
     io.on('connection', (socket) => {
         console.log('New client connected');
 
-        socket.on('joinRoom', ({ roomId, userId }) => {
+        socket.on('joinRoom', ({ roomId, username }) => {
             socket.join(roomId);
-            console.log(`User ${userId} joined room ${roomId}`);
+            console.log(`${username} joined room ${roomId}`);
         });
 
         socket.on('message', async (data) => {
-            const { roomId, userId, content } = data;
+            const { roomId, username, content } = data;
 
-            // Profanity check
             const containsProfanity = await profanityFilter.checkProfanity(content);
             if (containsProfanity) {
-                io.to(roomId).emit('profanityWarning', { userId, message: 'Your message was blocked by the profanity filter.' });
+                socket.emit('profanityWarning', { message: 'Your message contains inappropriate language.' });
                 return;
             }
 
-            // Uložení zprávy do databáze
-            try {
-                await db.execute('INSERT INTO messages (room_id, user_id, content) VALUES (?, ?, ?)', [
-                    roomId,
-                    userId,
-                    content,
-                ]);
-                io.to(roomId).emit('message', { userId, content });
-            } catch (error) {
-                console.error('Error saving message:', error);
-            }
+            io.to(roomId).emit('message', { username, content });
         });
 
         socket.on('disconnect', () => {

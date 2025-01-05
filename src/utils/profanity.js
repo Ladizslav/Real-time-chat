@@ -8,7 +8,7 @@ const checkProfanity = async (content) => {
         return response.data === 'true';
     } catch (error) {
         console.error('Profanity API error:', error);
-        return false; 
+        return false; // Pokud API selže, zpráva projde
     }
 };
 
