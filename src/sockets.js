@@ -1,8 +1,5 @@
 const profanityFilter = require('./utils/profanity');
 const db = require('./db');
-const express = require('express');
-const router = express.Router();
-const authenticateToken = require('./middleware/auth'); // Adjust the path as needed
 
 module.exports = (io) => {
     io.on('connection', (socket) => {
@@ -18,17 +15,11 @@ module.exports = (io) => {
                     return;
                 }
         
-                // Pokud je místnost soukromá, zkontrolujeme seznam povolených uživatelů
-                if (room[0].is_private) {
-                    const [allowedUsers] = await db.execute(
-                        'SELECT * FROM allowed_users WHERE room_id = ? AND user_id = ?',
-                        [roomId, username]
-                    );
-        
-                    if (allowedUsers.length === 0) {
-                        socket.emit('error', { message: 'Access denied. This room is private.' });
-                        return;
-                    }
+                // Kontrola, zda je uživatel zabanovaný
+                const [banned] = await db.execute('SELECT * FROM banned_users WHERE room_id = ? AND user_id = ?', [roomId, username]);
+                if (banned.length > 0) {
+                    socket.emit('error', { message: 'You are banned from this room.' });
+                    return;
                 }
         
                 // Připojení k místnosti
@@ -40,7 +31,6 @@ module.exports = (io) => {
                 socket.emit('error', { message: 'An error occurred while joining the room.' });
             }
         });
-        
         
         router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
             const { roomId } = req.params;
