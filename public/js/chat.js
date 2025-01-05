@@ -87,3 +87,37 @@ function logout() {
     sessionStorage.clear();
     window.location.href = '/';
 }
+
+// Funkce pro načtení seznamu místností
+async function fetchRooms() {
+    try {
+        const response = await fetch(`${window.location.origin}/api/chat/rooms`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        const rooms = await response.json();
+
+        if (response.ok) {
+            const roomList = document.getElementById('room-list');
+            roomList.innerHTML = ''; // Vyčistí seznam
+
+            rooms.forEach((room) => {
+                const roomElement = document.createElement('div');
+                roomElement.textContent = `${room.name} (ID: ${room.id}) ${
+                    room.is_private ? '[Private]' : '[Public]'
+                }`;
+                roomElement.style.cursor = 'pointer';
+                roomElement.onclick = () => joinRoom(room.id); // Kliknutím se uživatel připojí do místnosti
+                roomList.appendChild(roomElement);
+            });
+        } else {
+            alert(`Error fetching rooms: ${rooms.error}`);
+        }
+    } catch (error) {
+        console.error('Error fetching rooms:', error);
+    }
+}

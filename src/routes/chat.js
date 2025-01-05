@@ -34,6 +34,20 @@ router.post('/rooms', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+router.get('/rooms', authenticateToken, async (req, res) => {
+    try {
+        // Získáme veřejné místnosti a místnosti, kde je uživatel vlastníkem
+        const [rooms] = await db.execute(
+            `SELECT * FROM chat_rooms 
+             WHERE is_private = 0 OR owner_id = ?`,
+            [req.user.id]
+        );
 
+        res.status(200).json(rooms);
+    } catch (error) {
+        console.error('Error fetching rooms:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Export routeru
 module.exports = router;
