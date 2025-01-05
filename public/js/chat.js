@@ -162,7 +162,7 @@ async function banUser(roomId, userId) {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify({ userId }), 
         });
 
         const data = await response.json();

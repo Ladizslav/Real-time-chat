@@ -8,33 +8,20 @@ module.exports = (io) => {
         // Připojení k místnosti
         socket.on('joinRoom', async ({ roomId, username }) => {
             try {
-                // Zkontroluj, zda místnost existuje
+                // Zkontrolujeme, zda místnost existuje
                 const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ?', [roomId]);
                 if (room.length === 0) {
-                    socket.emit('error', { message: 'Room does not exist' });
+                    socket.emit('error', { message: 'Room does not exist.' });
                     return;
                 }
-
-                // Zamezíme opakovanému připojení do stejné místnosti
-                const rooms = Array.from(socket.rooms);
-                if (rooms.includes(roomId)) {
-                    console.log(`${username} is already in room ${roomId}`);
+        
+                // Kontrola, zda je uživatel zabanovaný
+                const [banned] = await db.execute('SELECT * FROM banned_users WHERE room_id = ? AND user_id = ?', [roomId, username]);
+                if (banned.length > 0) {
+                    socket.emit('error', { message: 'You are banned from this room.' });
                     return;
                 }
-
-                // Pokud je místnost soukromá, zkontroluj přístup uživatele
-                if (room[0].is_private) {
-                    const [allowedUsers] = await db.execute(
-                        'SELECT * FROM allowed_users WHERE room_id = ? AND user_id = ?',
-                        [roomId, username]
-                    );
-
-                    if (allowedUsers.length === 0) {
-                        socket.emit('error', { message: 'Access denied. This room is private.' });
-                        return;
-                    }
-                }
-
+        
                 // Připojení k místnosti
                 socket.join(roomId);
                 console.log(`${username} joined room ${roomId}`);
@@ -44,6 +31,7 @@ module.exports = (io) => {
                 socket.emit('error', { message: 'An error occurred while joining the room.' });
             }
         });
+        
 
         // Opustit místnost
         socket.on('leaveRoom', ({ roomId, username }) => {
