@@ -1,23 +1,41 @@
 const socket = io.connect(window.location.origin);
 
-// Získání uživatelského jména
+// Získání uživatelského jména a tokenu z sessionStorage
 const username = sessionStorage.getItem('username');
 const token = sessionStorage.getItem('token');
-const roomId = 'default-room'; // Defaultní místnost, můžete přidat dynamické ID
 
-// Připojení k místnosti
-socket.emit('joinRoom', { roomId, username });
+// Defaultní místnost (tuto logiku můžete upravit)
+let currentRoomId = 'default-room';
 
-// Zobrazení přihlášeného uživatele
+// Při načtení stránky nastavíme uživatelské jméno a připojíme k místnosti
 window.onload = () => {
     if (!username || !token) {
         alert('You must be logged in to access the chat.');
-        window.location.href = '/'; // Přesměruje zpět na přihlašovací stránku
+        window.location.href = '/';
     }
     document.getElementById('username-display').textContent = `Logged in as: ${username}`;
+    joinRoom(currentRoomId);
 };
 
-// Odesílání zpráv
+// Funkce pro připojení do místnosti
+async function joinRoom(roomId) {
+    currentRoomId = roomId; // Uložíme aktuální místnost
+    socket.emit('joinRoom', { roomId, username });
+
+    socket.on('error', (data) => {
+        alert(data.message); // Zobrazí chybu při připojení
+    });
+
+    // Přijímání zpráv
+    socket.on('message', (data) => {
+        const chatBox = document.getElementById('chat-box');
+        const newMessage = document.createElement('div');
+        newMessage.textContent = `${data.username}: ${data.content}`;
+        chatBox.appendChild(newMessage);
+    });
+}
+
+// Funkce pro odesílání zpráv
 function sendMessage() {
     const input = document.getElementById('chat-input');
     const content = input.value;
@@ -27,28 +45,16 @@ function sendMessage() {
         return;
     }
 
-    socket.emit('message', { roomId, username, content });
+    socket.emit('message', { roomId: currentRoomId, username, content });
     input.value = ''; // Vyčistí vstupní pole
 }
 
-// Příjem zpráv
-socket.on('message', (data) => {
-    const chatBox = document.getElementById('chat-box');
-    const newMessage = document.createElement('div');
-    newMessage.textContent = `${data.username}: ${data.content}`;
-    chatBox.appendChild(newMessage);
-});
-
-// Upozornění na nevhodný obsah
-socket.on('profanityWarning', (data) => {
-    alert(data.message); // Zobrazí upozornění uživateli
-});
-
-// Vytvoření nové místnosti
+// Funkce pro vytvoření nové místnosti
 async function createRoom() {
     const roomName = document.getElementById('room-name').value;
     const isPrivate = document.getElementById('is-private').checked;
     const enableFilter = document.getElementById('enable-filter').checked;
+    const allowedUsers = isPrivate ? prompt('Enter usernames (comma-separated):').split(',') : [];
 
     if (!roomName) {
         alert('Room name is required!');
@@ -62,7 +68,7 @@ async function createRoom() {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ name: roomName, isPrivate, enableFilter }),
+            body: JSON.stringify({ name: roomName, isPrivate, enableFilter, allowedUsers }),
         });
 
         const data = await response.json();
@@ -76,7 +82,7 @@ async function createRoom() {
     }
 }
 
-// Odhlášení uživatele
+// Funkce pro odhlášení uživatele
 function logout() {
     sessionStorage.clear();
     window.location.href = '/';

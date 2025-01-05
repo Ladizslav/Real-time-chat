@@ -1,12 +1,5 @@
-const express = require('express');
-const authenticateToken = require('../middleware/auth');
-const db = require('../db');
-
-const router = express.Router();
-
-// Vytvoření nové místnosti
 router.post('/rooms', authenticateToken, async (req, res) => {
-    const { name, isPrivate, enableFilter } = req.body;
+    const { name, isPrivate, enableFilter, allowedUsers } = req.body; // Přidáme allowedUsers jako pole uživatelů
     const ownerId = req.user.id;
 
     if (!name) {
@@ -18,11 +11,19 @@ router.post('/rooms', authenticateToken, async (req, res) => {
             'INSERT INTO chat_rooms (name, is_private, owner_id, enable_filter) VALUES (?, ?, ?, ?)',
             [name, isPrivate || false, ownerId, enableFilter || false]
         );
-        res.status(201).json({ message: 'Room created successfully', roomId: result.insertId });
+
+        const roomId = result.insertId;
+
+        // Pokud je místnost soukromá, přidej povolené uživatele
+        if (isPrivate && allowedUsers) {
+            for (const userId of allowedUsers) {
+                await db.execute('INSERT INTO allowed_users (room_id, user_id) VALUES (?, ?)', [roomId, userId]);
+            }
+        }
+
+        res.status(201).json({ message: 'Room created successfully', roomId });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-module.exports = router;
