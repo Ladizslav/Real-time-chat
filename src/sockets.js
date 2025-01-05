@@ -43,12 +43,19 @@ module.exports = (io) => {
         socket.on('leaveRoom', ({ roomId, username }) => {
             try {
                 socket.leave(roomId);
+        
                 console.log(`${username} left room ${roomId}`);
-                io.to(roomId).emit('message', { username, content: `${username} has left the room.` });
+        
+                // Poslat systémovou zprávu o opuštění místnosti
+                io.to(roomId).emit('message', {
+                    username: 'System', // Odesílatel je systém
+                    content: `${username} has left the room.`,
+                });
             } catch (error) {
                 console.error(`Error leaving room ${roomId}:`, error);
             }
         });
+        
 
         // Příjem zpráv
         socket.on('message', async (data) => {
