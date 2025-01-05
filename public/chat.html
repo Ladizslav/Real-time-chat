@@ -34,6 +34,20 @@
         </div>
 
         <div class="card p-3 mb-3">
+            <h2>Notifications</h2>
+            <div id="notification-box" style="height: 150px; overflow-y: auto; border: 1px solid #ccc;"></div>
+        </div>
+
+        <div class="card p-3 mb-3">
+            <h2>Ban User</h2>
+            <input id="ban-user-id" type="text" class="form-control mb-2" placeholder="Enter username to ban">
+            <button onclick="banUser(currentRoomId, document.getElementById('ban-user-id').value)" class="btn btn-danger">
+                Ban User
+            </button>
+        </div>
+        
+
+        <div class="card p-3 mb-3">
             <h2>Messages</h2>
             <div id="chat-box" style="height: 300px; overflow-y: auto; border: 1px solid #ccc;" class="mb-3"></div>
             <div class="input-group">

@@ -19,6 +19,12 @@ window.onload = () => {
 
 // Funkce pro připojení do místnosti
 async function joinRoom(roomId) {
+    // Pokud už je uživatel v jiné místnosti, odpojí se z ní
+    if (currentRoomId && currentRoomId !== roomId) {
+        socket.emit('leaveRoom', { roomId: currentRoomId, username });
+        console.log(`Left room ${currentRoomId}`);
+    }
+
     // Nastavení aktuální místnosti
     currentRoomId = roomId;
 
@@ -29,7 +35,7 @@ async function joinRoom(roomId) {
     // Připojení k nové místnosti
     socket.emit('joinRoom', { roomId, username });
 
-    // Odebrání předchozích listenerů
+    // Odebrání starých listenerů
     socket.off('message');
     socket.off('error');
 
@@ -46,6 +52,7 @@ async function joinRoom(roomId) {
 
     console.log(`Joined room ${roomId}`);
 }
+
 
 
 
@@ -68,7 +75,11 @@ async function createRoom() {
     const roomName = document.getElementById('room-name').value;
     const isPrivate = document.getElementById('is-private').checked;
     const enableFilter = document.getElementById('enable-filter').checked;
-    const allowedUsers = isPrivate ? prompt('Enter usernames (comma-separated):').split(',') : [];
+
+    // Pokud je místnost soukromá, požádáme o seznam uživatelů
+    const allowedUsers = isPrivate
+        ? prompt('Enter usernames of allowed users (comma-separated):').split(',').map((u) => u.trim())
+        : [];
 
     if (!roomName) {
         alert('Room name is required!');
@@ -95,6 +106,7 @@ async function createRoom() {
         console.error('Error creating room:', error);
     }
 }
+
 
 // Funkce pro odhlášení uživatele
 function logout() {
@@ -135,3 +147,32 @@ async function fetchRooms() {
         console.error('Error fetching rooms:', error);
     }
 }
+
+async function banUser(roomId, userId) {
+    try {
+        const response = await fetch(`${window.location.origin}/api/chat/rooms/${roomId}/ban`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ userId }),
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            alert('User banned successfully!');
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error banning user:', error);
+    }
+}
+socket.on('profanityNotification', (data) => {
+    const notificationBox = document.getElementById('notification-box');
+    const newNotification = document.createElement('div');
+    newNotification.style.color = 'red'; // Zvýraznění notifikace
+    newNotification.textContent = `⚠️ [Notification]: ${data.message}`;
+    notificationBox.appendChild(newNotification);
+});
