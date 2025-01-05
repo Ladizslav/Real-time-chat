@@ -19,27 +19,24 @@ window.onload = () => {
 
 // Funkce pro připojení do místnosti
 async function joinRoom(roomId) {
-    // Pokud už je uživatel v jiné místnosti, odpojí se z ní
     if (currentRoomId && currentRoomId !== roomId) {
         socket.emit('leaveRoom', { roomId: currentRoomId, username });
         console.log(`Left room ${currentRoomId}`);
     }
 
-    // Nastavení aktuální místnosti
     currentRoomId = roomId;
 
-    // Vyčištění předchozího chatu
     const chatBox = document.getElementById('chat-box');
-    chatBox.innerHTML = ''; // Vyčistí obsah
+    chatBox.innerHTML = ''; // Vyčistí chat při připojení do nové místnosti
 
-    // Připojení k nové místnosti
     socket.emit('joinRoom', { roomId, username });
 
-    // Odebrání starých listenerů
+    // Odebereme staré listenery
     socket.off('message');
     socket.off('error');
+    socket.off('profanityNotification');
 
-    // Přidání listenerů pro zprávy a chyby
+    // Přidání listenerů
     socket.on('message', (data) => {
         const newMessage = document.createElement('div');
         newMessage.textContent = `${data.username}: ${data.content}`;
@@ -50,8 +47,17 @@ async function joinRoom(roomId) {
         alert(data.message);
     });
 
+    socket.on('profanityNotification', (data) => {
+        const notificationBox = document.getElementById('notification-box');
+        const newNotification = document.createElement('div');
+        newNotification.style.color = 'red';
+        newNotification.textContent = `⚠️ [Notification]: ${data.message}`;
+        notificationBox.appendChild(newNotification);
+    });
+
     console.log(`Joined room ${roomId}`);
 }
+
 
 
 
@@ -169,10 +175,3 @@ async function banUser(roomId, userId) {
         console.error('Error banning user:', error);
     }
 }
-socket.on('profanityNotification', (data) => {
-    const notificationBox = document.getElementById('notification-box');
-    const newNotification = document.createElement('div');
-    newNotification.style.color = 'red'; // Zvýraznění notifikace
-    newNotification.textContent = `⚠️ [Notification]: ${data.message}`;
-    notificationBox.appendChild(newNotification);
-});

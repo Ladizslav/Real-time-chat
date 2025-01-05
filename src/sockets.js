@@ -55,35 +55,38 @@ module.exports = (io) => {
                 console.error(`Error leaving room ${roomId}:`, error);
             }
         });
+
+        // Příjem zpráv
         socket.on('message', async (data) => {
             const { roomId, username, content } = data;
         
             try {
-                // Získání místnosti
                 const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ?', [roomId]);
                 if (room.length === 0) {
                     socket.emit('error', { message: 'Room does not exist' });
                     return;
                 }
         
-                // Kontrola na Profanity Filter
                 if (room[0].enable_filter) {
                     const containsProfanity = await profanityFilter.checkProfanity(content);
                     if (containsProfanity) {
                         socket.emit('profanityWarning', { message: 'Your message contains inappropriate language.' });
         
-                        // Informujeme vlastníka místnosti o nevhodné zprávě
+                        // Odeslání notifikace vlastníkovi místnosti
                         const [owner] = await db.execute('SELECT username FROM users WHERE id = ?', [room[0].owner_id]);
                         if (owner.length > 0) {
                             const ownerSocket = Array.from(io.sockets.sockets.values()).find(
                                 (s) => s.username === owner[0].username
                             );
+        
                             if (ownerSocket) {
                                 ownerSocket.emit('profanityNotification', {
                                     username,
                                     content,
                                     message: `Blocked message from user ${username}: "${content}"`,
                                 });
+                            } else {
+                                console.log(`Owner socket for ${owner[0].username} not found.`);
                             }
                         }
         
@@ -98,44 +101,6 @@ module.exports = (io) => {
             }
         });
         
-        // Příjem zpráv
-        socket.on('message', async (data) => {
-            const { roomId, username, content } = data;
-
-            try {
-                // Získání místnosti
-                const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ?', [roomId]);
-                if (room.length === 0) {
-                    socket.emit('error', { message: 'Room does not exist' });
-                    return;
-                }
-
-                // Kontrola na Profanity Filter
-                if (room[0].enable_filter) {
-                    const containsProfanity = await profanityFilter.checkProfanity(content);
-                    if (containsProfanity) {
-                        socket.emit('profanityWarning', { message: 'Your message contains inappropriate language.' });
-
-                        // Informujeme vlastníka místnosti o nevhodné zprávě
-                        const [owner] = await db.execute('SELECT username FROM users WHERE id = ?', [room[0].owner_id]);
-                        if (owner.length > 0) {
-                            io.to(roomId).emit('profanityNotification', {
-                                username,
-                                message: `User ${username} tried to send a blocked message: "${content}"`,
-                            });
-                        }
-
-                        return;
-                    }
-                }
-
-                // Odeslání zprávy do místnosti
-                io.to(roomId).emit('message', { username, content });
-            } catch (error) {
-                console.error('Error sending message:', error);
-            }
-        });
-
         // Odpojení klienta
         socket.on('disconnect', () => {
             console.log('Client disconnected');

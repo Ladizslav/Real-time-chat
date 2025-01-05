@@ -50,21 +50,20 @@ router.get('/rooms', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
 // Banování uživatele
 router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
     const { roomId } = req.params;
-    const { userId } = req.body; // ID uživatele, kterého chceme zabanovat
+    const { userId } = req.body; // Uživatel, který má být zabanován
     const ownerId = req.user.id; // ID vlastníka místnosti
 
     try {
-        // Zkontrolujeme, zda je aktuální uživatel vlastníkem místnosti
+        // Zkontrolujeme, zda aktuální uživatel je vlastníkem místnosti
         const [room] = await db.execute('SELECT * FROM chat_rooms WHERE id = ? AND owner_id = ?', [roomId, ownerId]);
         if (room.length === 0) {
             return res.status(403).json({ error: 'You are not the owner of this room.' });
         }
 
-        // Přidání uživatele do tabulky banned_users
+        // Přidání uživatele do seznamu zabanovaných
         await db.execute('INSERT INTO banned_users (room_id, user_id) VALUES (?, ?)', [roomId, userId]);
         res.status(200).json({ message: 'User banned successfully.' });
     } catch (error) {
