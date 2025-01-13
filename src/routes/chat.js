@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth'); // cesta správná podle vaší struktury
+const authenticateToken = require('../middleware/auth');
 const db = require('../db');
 
-// Vytvoření nové místnosti
+
 router.post('/rooms', authenticateToken, async (req, res) => {
     const { name, isPrivate, enableFilter, allowedUsers } = req.body;
     console.log('Request body:', req.body);
@@ -37,7 +37,6 @@ router.post('/rooms', authenticateToken, async (req, res) => {
 
 router.get('/rooms', authenticateToken, async (req, res) => {
     try {
-        // Získáme veřejné místnosti a místnosti, kde je uživatel vlastníkem
         const [rooms] = await db.execute(
             `SELECT * FROM chat_rooms 
              WHERE is_private = 0 OR owner_id = ?`,
@@ -50,7 +49,6 @@ router.get('/rooms', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// Banování uživatele
 router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
     const { roomId } = req.params;
     const { userId } = req.body;
@@ -69,6 +67,62 @@ router.post('/rooms/:roomId/ban', authenticateToken, async (req, res) => {
     }
 });
 
+router.get('/messages', authenticateToken, async (req, res) => {
+    try {
+        const [messages] = await db.execute(`
+            SELECT * FROM messages
+        `);
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error fetching all messages:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
-// Export routeru
+// Vrácení všech zpráv vybraného uživatele
+router.get('/messages/user/:userId', authenticateToken, async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const [messages] = await db.execute(`
+            SELECT * FROM messages WHERE user_id = ?
+        `, [userId]);
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error fetching user messages:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Vrácení všech zpráv vybrané chat room
+router.get('/messages/room/:roomId', authenticateToken, async (req, res) => {
+    const { roomId } = req.params;
+    try {
+        const [messages] = await db.execute(`
+            SELECT * FROM messages WHERE room_id = ?
+        `, [roomId]);
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error fetching room messages:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Vrácení všech zpráv obsahujících vybrané slovo (case-insensitive)
+router.get('/messages/search', authenticateToken, async (req, res) => {
+    const { keyword } = req.query; // Query parameter ?keyword=value
+    if (!keyword) {
+        return res.status(400).json({ error: 'Keyword query parameter is required' });
+    }
+    try {
+        const [messages] = await db.execute(`
+            SELECT * FROM messages WHERE LOWER(content) LIKE ?
+        `, [`%${keyword.toLowerCase()}%`]);
+        res.status(200).json(messages);
+    } catch (error) {
+        console.error('Error fetching messages by keyword:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 module.exports = router;

@@ -27,16 +27,16 @@ async function joinRoom(roomId) {
     currentRoomId = roomId;
 
     const chatBox = document.getElementById('chat-box');
-    chatBox.innerHTML = ''; // Vyčistí chat při připojení do nové místnosti
+    chatBox.innerHTML = ''; 
 
     socket.emit('joinRoom', { roomId, username });
 
-    // Odebereme staré listenery
+ 
     socket.off('message');
     socket.off('error');
     socket.off('profanityNotification');
 
-    // Přidání listenerů
+
     socket.on('message', (data) => {
         const newMessage = document.createElement('div');
         newMessage.textContent = `${data.username}: ${data.content}`;
@@ -58,7 +58,7 @@ async function joinRoom(roomId) {
     console.log(`Joined room ${roomId}`);
 }
 
-// Funkce pro odesílání zpráv
+
 function sendMessage() {
     const input = document.getElementById('chat-input');
     const content = input.value;
@@ -69,10 +69,10 @@ function sendMessage() {
     }
 
     socket.emit('message', { roomId: currentRoomId, username, content });
-    input.value = ''; // Vyčistí vstupní pole
+    input.value = ''; 
 }
 
-// Funkce pro vytvoření nové místnosti
+
 async function createRoom() {
     const roomName = document.getElementById('room-name').value;
     const isPrivate = document.getElementById('is-private').checked;
@@ -114,13 +114,12 @@ async function createRoom() {
 
 
 
-// Funkce pro odhlášení uživatele
 function logout() {
     sessionStorage.clear();
     window.location.href = '/';
 }
 
-// Funkce pro načtení seznamu místností
+
 async function fetchRooms() {
     try {
         const response = await fetch(`${window.location.origin}/api/chat/rooms`, {
@@ -135,7 +134,7 @@ async function fetchRooms() {
 
         if (response.ok) {
             const roomList = document.getElementById('room-list');
-            roomList.innerHTML = ''; // Vyčistí seznam
+            roomList.innerHTML = ''; 
 
             rooms.forEach((room) => {
                 const roomElement = document.createElement('div');
@@ -143,7 +142,7 @@ async function fetchRooms() {
                     room.is_private ? '[Private]' : '[Public]'
                 }`;
                 roomElement.style.cursor = 'pointer';
-                roomElement.onclick = () => joinRoom(room.id); // Kliknutím se uživatel připojí do místnosti
+                roomElement.onclick = () => joinRoom(room.id); 
                 roomList.appendChild(roomElement);
             });
         } else {

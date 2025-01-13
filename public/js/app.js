@@ -1,6 +1,5 @@
 const API_BASE = `${window.location.origin}/api/auth`;
 
-// Funkce pro registraci uživatele
 async function register() {
     const username = document.getElementById('register-username').value;
     const password = document.getElementById('register-password').value;
@@ -29,7 +28,6 @@ async function register() {
     }
 }
 
-// Funkce pro přihlášení uživatele
 async function login() {
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
@@ -48,10 +46,10 @@ async function login() {
 
         const data = await response.json();
         if (response.ok) {
-            sessionStorage.setItem('username', username); // Uloží uživatelské jméno
-            sessionStorage.setItem('token', data.token); // Uloží JWT token
+            sessionStorage.setItem('username', username); 
+            sessionStorage.setItem('token', data.token); 
             alert('Login successful!');
-            window.location.href = '/chat.html'; // Přesměrování do chatu
+            window.location.href = '/chat.html'; 
         } else {
             alert(`Error: ${data.error}`);
         }
